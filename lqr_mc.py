@@ -133,13 +133,13 @@ def mc_implicit_euler(lqr, x0, N_steps, N_mc, seed=42):
 
     Derivation:
       X_{n+1} = X_n + τ [H X_{n+1} + M a(t_{n+1}, X_{n+1})] + sigma ΔW_n
-      代入 a(t, x) = -D^{-1} M^T S(t) x:
+      substitute with a(t, x) = -D^{-1} M^T S(t) x:
       X_{n+1} = X_n + τ [H - M D^{-1} M^T S(t_{n+1})] X_{n+1} + sigma ΔW_n
 
-      organize:
+    organize:
       [I - τ (H - M D^{-1} M^T S(t_{n+1}))] X_{n+1} = X_n + sigma ΔW_n
-      令 B_{n+1} = I - τ (H - M D^{-1} M^T S(t_{n+1}))
-      则 X_{n+1} = B_{n+1}^{-1} (X_n + sigma ΔW_n)
+      let B_{n+1} = I - τ (H - M D^{-1} M^T S(t_{n+1}))
+      and get X_{n+1} = B_{n+1}^{-1} (X_n + sigma ΔW_n)
 
     Each step requires solving a 2*2 system of linear equations, but since B does not change with the path,
     B^{-1} can be pre-calculated, and then only matrix multiplication is needed.
