@@ -386,3 +386,57 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("All Exercise 1.1 tests PASSED!")
     print("=" * 60)
+    
+    # ------------------------------------------------------------------
+    # Report Figure 1: Variation of elements of the S(t) matrix over time
+    # Purpose: To show the solution of the Riccati ODE and verify the terminal condition S(T) = R   
+    # ------------------------------------------------------------------
+    fig, ax = plt.subplots(figsize=(8, 5))
+ 
+    ax.plot(time_grid, S_values[:, 0, 0], 'b-',  linewidth=2, label='S(t)[0,0]')
+    ax.plot(time_grid, S_values[:, 0, 1], 'r--', linewidth=2, label='S(t)[0,1]')
+    ax.plot(time_grid, S_values[:, 1, 0], 'g-.', linewidth=2, label='S(t)[1,0]')
+    ax.plot(time_grid, S_values[:, 1, 1], 'm:',  linewidth=2, label='S(t)[1,1]')
+ 
+    ax.set_xlabel('Time t', fontsize=12)
+    ax.set_ylabel('S(t) entries', fontsize=12)
+    ax.set_title('Riccati ODE Solution: S(t) Matrix Entries over Time', fontsize=13)
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+ 
+    plt.tight_layout()
+    plt.savefig('fig1_riccati_solution.png', dpi=150, bbox_inches='tight')
+    plt.close()
+    print("\nfig1_riccati_solution.png has saved!")
+ 
+    # ------------------------------------------------------------------
+    # Figure 2: Heatmap of the value function v(0, x)
+    # Purpose: To visually display the shape of the value function (should be bowl-shaped centred at the origin)
+    # ------------------------------------------------------------------
+    N_grid = 50
+    x1_range = np.linspace(-3, 3, N_grid)
+    x2_range = np.linspace(-3, 3, N_grid)
+    X1, X2 = np.meshgrid(x1_range, x2_range)
+ 
+    t_batch = torch.zeros(N_grid * N_grid)
+    x_batch = torch.zeros(N_grid * N_grid, 1, 2)
+    for i in range(N_grid):
+        for j in range(N_grid):
+            idx = i * N_grid + j
+            x_batch[idx, 0, 0] = X1[i, j]
+            x_batch[idx, 0, 1] = X2[i, j]
+ 
+    v_batch = lqr.value_function(t_batch, x_batch).numpy().reshape(N_grid, N_grid)
+ 
+    fig, ax = plt.subplots(figsize=(8, 6))
+    cp = ax.contourf(X1, X2, v_batch, levels=20, cmap='viridis')
+    plt.colorbar(cp, ax=ax, label='v(0, x)')
+    ax.set_xlabel('x1', fontsize=12)
+    ax.set_ylabel('x2', fontsize=12)
+    ax.set_title('Value Function v(0, x) at t = 0', fontsize=13)
+ 
+    plt.tight_layout()
+    plt.savefig('fig2_value_function_heatmap.png', dpi=150, bbox_inches='tight')
+    plt.close()
+    print("Exercise1.1 fig2_value_function_heatmap.png has saved!")
+ 

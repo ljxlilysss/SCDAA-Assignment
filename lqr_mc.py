@@ -293,10 +293,8 @@ if __name__ == "__main__":
     # ==============================================================
     # Log-Log plot
     # ==============================================================
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-
     # Figure 1: Time discretization convergence
-    ax = axes[0]
+    fig, ax = plt.subplots(figsize=(14, 6))
     dt_list = [T / N for N in N_steps_list]
 
     ax.loglog(dt_list, errors_explicit_exp1, 'bo-',
@@ -315,9 +313,13 @@ if __name__ == "__main__":
     ax.set_title('Exp 1: Time Discretisation Convergence\n(N_MC = 100,000)', fontsize=13)
     ax.legend(fontsize=11)
     ax.grid(True, which='both', alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('fig3_time_discretisation_convergence.png', dpi=150, bbox_inches='tight')
+    plt.close()
+    print("\nExercise1.2: fig3_time_discretisation_convergence.png has saved!")
 
     # Figure 2: MC sample number convergence 
-    ax = axes[1]
+    fig, ax = plt.subplots(figsize=(14, 6))
 
     ax.loglog(N_mc_list, errors_explicit_exp2, 'bo-',
               label='Explicit Euler', linewidth=2, markersize=7)
@@ -337,6 +339,7 @@ if __name__ == "__main__":
     ax.grid(True, which='both', alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('exercise_1_2_convergence.png',
-                dpi=150, bbox_inches='tight')
+    plt.savefig('fig4_mc_sample_convergence.png', dpi=150, bbox_inches='tight')
+    plt.close()
+    print("Exercise1.2: fig4_mc_sample_convergence.png has saved!")
    
