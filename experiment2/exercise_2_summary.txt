@@ -1,0 +1,8 @@
+Exercise 2 summary
+===================
+Device: cpu
+Train/Val/Test sizes: 40000/8000/8000
+Q2.1 value test MSE: 1.15458526e-04
+Q2.1 value test relL2: 8.16011394e-04
+Q2.2 control test MSE: 9.59120036e-06
+Q2.2 control test relL2: 9.88925924e-04

@@ -32,44 +32,27 @@ import torch
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from lqr_solver import LQR
+import os
+from exercise_1_1_lqr_solver import LQR
 
+EXP_NUM = 1
+EXP_DIR = f"experiment{EXP_NUM}"
+os.makedirs(EXP_DIR, exist_ok=True)
 
 # ====================================================================
 # Explicit Euler MC simulator
 # ====================================================================
 def mc_explicit_euler(lqr, x0, N_steps, N_mc, seed=42):
-    """
-    Explicit Euler Monte Carlo Simulation.
-
-    Derivation:
-      Substituting a(t_n, X_n) = -D^{-1} M^T S(t_n) X_n into the explicit Euler formula:
-      X_{n+1} = X_n + τ [H X_n + M(-D^{-1} M^T S(t_n) X_n)] + sigma ΔW_n
-      = X_n + τ [H - M D^{-1} M^T S(t_n)] X_n + sigma ΔW_n= A_n X_n + sigma ΔW_n
-      Where A_n = I + τ (H - M D^{-1} M^T S(t_n))
-
-    To save memory, we process MC samples in chunks.
-    
-    Parameters:
-      lqr: LQR object (already solved_riccati)
-      x0: np.ndarray (2,), initial state
-      N_steps: int, number of time steps
-      N_mc: int, number of MC samples
-      seed: int, random seed
-    
-    Returns:
-      v_mc: float, MC estimate of v(0, x0)
-    """
+    """Explicit Euler Monte Carlo Simulation."""
     rng = np.random.RandomState(seed)
 
     T = lqr.T
     tau = T / N_steps
     sqrt_tau = np.sqrt(tau)
 
-    # Precompute the transition matrix for each time step. A_n
-    # A_n = I + τ (H - M D^{-1} M^⊤ S(t_n)), shape (2,2)
+    # Precompute transition matrix A_n for each time step
     time_grid = np.linspace(0, T, N_steps + 1)
-    S_all = lqr._get_S_at_times(time_grid)  # shape (N_steps+1, 2, 2)
+    S_all = lqr._get_S_at_times(time_grid)
 
     I2 = np.eye(2)
     M_Dinv_MT = lqr.M_Dinv_MT
@@ -80,79 +63,53 @@ def mc_explicit_euler(lqr, x0, N_steps, N_mc, seed=42):
         drift_matrix = H - M_Dinv_MT @ S_all[n]
         A_list[n] = I2 + tau * drift_matrix
 
-    # Pre-calculate control gain matrix G_n = D^{-1} M^⊤ S(t_n)
-    # a_n = -G_n X_n, 且 a^⊤ D a = X^⊤ G_n^⊤ D G_n X = X^⊤ (S M D^{-1} M^⊤ S) X
-    # Precompute Q_n = C + S(t_n) M D^{-1} M^⊤ S(t_n) (Comprehensive Cost Matrix)
-    # running_cost_n = X^⊤ Q_n X
-    # a^⊤ D a = (G X)^⊤ D (G X) = X^⊤ G^⊤ D G X
-    # G = D^{-1} M^⊤ S, G^⊤ D G = S M D^{-⊤} D D^{-1} M^⊤ S = S M D^{-1} M^⊤ S
+    # Precompute comprehensive cost matrix Q_n
     D_inv_MT = lqr.D_inv_MT
     Q_list = np.zeros((N_steps, 2, 2))
     for n in range(N_steps):
-        G_n = D_inv_MT @ S_all[n]  # shape (2,2)
+        G_n = D_inv_MT @ S_all[n]
         Q_list[n] = lqr.C + G_n.T @ lqr.D @ G_n
 
     sigma = lqr.sigma
 
-    # Simulate in batches to save memory.
-    CHUNK = min(N_mc, 20000)  # Maximum of 20,000 paths per batch
+    # Simulate in batches to save memory
+    CHUNK = min(N_mc, 20000)
     total_cost_sum = 0.0
-
     n_processed = 0
+
     while n_processed < N_mc:
         batch = min(CHUNK, N_mc - n_processed)
-
-        # X shape: (batch, 2)
         X = np.tile(x0, (batch, 1))
         running_cost = np.zeros(batch)
 
         for n in range(N_steps):
-            # Running cost: X^⊤ Q_n X (include state costs and control costs)
-            # einsum: for each path i, cost_i = Σ_jk X[i,j] Q[j,k] X[i,k]
+            # Calculate running cost
             running_cost += tau * np.einsum('ij,jk,ik->i', X, Q_list[n], X)
-
-            # Generate Brownian increment ΔW ~ N(0, τ I)
+            # Generate Brownian increment
             dW = rng.randn(batch, 2) * sqrt_tau
-
-            # Explicit Euler step：X_{n+1} = A_n X_n + σ ΔW_n
+            # Explicit Euler step
             X = X @ A_list[n].T + dW @ sigma.T
 
-        # Terminal: X_T^⊤ R X_T
-        terminal_cost = np.einsum('ij,jk,ik->i', X, lqr.R_mat, X)
+        # Calculate terminal cost
+        terminal_cost = np.einsum('ij,jk,ik->i', X, lqr.R, X)
         total_cost_sum += np.sum(running_cost + terminal_cost)
         n_processed += batch
 
     v_mc = total_cost_sum / N_mc
     return v_mc
 
-
+# ====================================================================
 # Implicit Euler MC simulator
+# ====================================================================
 def mc_implicit_euler(lqr, x0, N_steps, N_mc, seed=42):
-    """
-    Implicit Euler Monte Carlo Simulator
-
-    Derivation:
-      X_{n+1} = X_n + τ [H X_{n+1} + M a(t_{n+1}, X_{n+1})] + sigma ΔW_n
-      substitute with a(t, x) = -D^{-1} M^T S(t) x:
-      X_{n+1} = X_n + τ [H - M D^{-1} M^T S(t_{n+1})] X_{n+1} + sigma ΔW_n
-
-    organize:
-      [I - τ (H - M D^{-1} M^T S(t_{n+1}))] X_{n+1} = X_n + sigma ΔW_n
-      let B_{n+1} = I - τ (H - M D^{-1} M^T S(t_{n+1}))
-      and get X_{n+1} = B_{n+1}^{-1} (X_n + sigma ΔW_n)
-
-    Each step requires solving a 2*2 system of linear equations, but since B does not change with the path,
-    B^{-1} can be pre-calculated, and then only matrix multiplication is needed.
-
-    Paremeters/Return: the same as mc_explicit_euler
-    """
+    """Implicit Euler Monte Carlo Simulator"""
     rng = np.random.RandomState(seed)
 
     T = lqr.T
     tau = T / N_steps
     sqrt_tau = np.sqrt(tau)
 
-    # precalculate B_{n+1}^{-1} and comprehensive cost matrix Q_n
+    # Precompute B_{n+1}^{-1} and Q_n
     time_grid = np.linspace(0, T, N_steps + 1)
     S_all = lqr._get_S_at_times(time_grid)
 
@@ -167,7 +124,7 @@ def mc_implicit_euler(lqr, x0, N_steps, N_mc, seed=42):
         B = I2 - tau * drift_matrix
         B_inv_list[n] = np.linalg.inv(B)
 
-    # running cost Q_n = C + G_n^⊤ D G_n
+    # Precompute Q_n
     Q_list = np.zeros((N_steps, 2, 2))
     for n in range(N_steps):
         G_n = D_inv_MT @ S_all[n]
@@ -186,17 +143,16 @@ def mc_implicit_euler(lqr, x0, N_steps, N_mc, seed=42):
         running_cost = np.zeros(batch)
 
         for n in range(N_steps):
-            # Operating cost (calculated at X_n, using the left-endpoint rule)
+            # Calculate running cost
             running_cost += tau * np.einsum('ij,jk,ik->i', X, Q_list[n], X)
-
-            # Brownian increment
+            # Generate Brownian increment
             dW = rng.randn(batch, 2) * sqrt_tau
-
-            # Implicit Euler step: X_{n+1} = B_{n+1}^{-1} (X_n + σ ΔW_n)
+            # Implicit Euler step
             rhs = X + dW @ sigma.T
             X = rhs @ B_inv_list[n].T
 
-        terminal_cost = np.einsum('ij,jk,ik->i', X, lqr.R_mat, X)
+        # Calculate terminal cost
+        terminal_cost = np.einsum('ij,jk,ik->i', X, lqr.R, X)
         total_cost_sum += np.sum(running_cost + terminal_cost)
         n_processed += batch
 
@@ -205,13 +161,10 @@ def mc_implicit_euler(lqr, x0, N_steps, N_mc, seed=42):
 
 
 # ====================================================================
-# Test/Example usage
+# Test 
 # ====================================================================
 if __name__ == "__main__":
-
-    # ==============================================================
-    # 1. Set parameters
-    # ==============================================================
+    # Set parameters
     H = np.array([[1.0, 0.0],
                    [0.0, 1.0]])
     M = np.array([[1.0, 0.0],
@@ -230,9 +183,7 @@ if __name__ == "__main__":
     fine_grid = np.linspace(0, T, 10001)
     lqr.solve_riccati(fine_grid)
 
-    # ==============================================================
-    # 2. Analytical value function (reference value)
-    # ==============================================================
+    # Analytical value function (reference value)
     x0 = np.array([1.0, 0.5])
     t_tensor = torch.tensor([0.0])
     x_tensor = torch.tensor(x0).unsqueeze(0).unsqueeze(0).float()
@@ -240,10 +191,7 @@ if __name__ == "__main__":
     print(f"Analytical value function v(0, x0) = {v_exact:.10f}")
     print(f"initial state x0 = {x0}\n")
 
-    # ==============================================================
-    # Experiment 1: Fix N_MC = 10^5, vary N_steps
-    # Expected value: Error ∝ τ = T/N_steps → log-log Slope ≈ 1
-    # ==============================================================
+    # Experiment 1: Fix N_MC, vary N_steps (time discretization convergence)
     print("=" * 70)
     print("Experiment 1: Time Discretization Convergence (fixed N_MC=100,000)")
     print("=" * 70)
@@ -265,10 +213,7 @@ if __name__ == "__main__":
               f"Explicit: v={v_exp:.6f}, err={err_exp:.2e} | "
               f"Implicit: v={v_imp:.6f}, err={err_imp:.2e}")
 
-    # ==============================================================
-    # Experiment 2: Fix N_steps=5000, vary N_MC
-    # Expected: Error ∝ 1/√N_MC → log-log Slope ≈ -0.5
-    # ==============================================================
+    # Experiment 2: Fix N_steps, vary N_MC (MC sample convergence)
     print("=" * 70)
     print("Experiment 2: Convergence of MC sample size (fixed N_steps=5,000)")
     print("=" * 70)
@@ -290,10 +235,7 @@ if __name__ == "__main__":
               f"Explicit: v={v_exp:.6f}, err={err_exp:.2e} | "
               f"Implicit: v={v_imp:.6f}, err={err_imp:.2e}")
 
-    # ==============================================================
-    # Log-Log plot
-    # ==============================================================
-    # Figure 1: Time discretization convergence
+    # Log-Log plot 1: Time discretization convergence
     fig, ax = plt.subplots(figsize=(14, 6))
     dt_list = [T / N for N in N_steps_list]
 
@@ -314,11 +256,11 @@ if __name__ == "__main__":
     ax.legend(fontsize=11)
     ax.grid(True, which='both', alpha=0.3)
     plt.tight_layout()
-    plt.savefig('fig3_time_discretisation_convergence.png', dpi=150, bbox_inches='tight')
+    plt.savefig(os.path.join(EXP_DIR,'exercise_1_2_time_discretisation_convergence.png'), dpi=150, bbox_inches='tight')
     plt.close()
-    print("\nExercise1.2: fig3_time_discretisation_convergence.png has saved!")
+    print("\nExercise1.2: exercise_1_2_time_discretisation_convergence.png has saved!")
 
-    # Figure 2: MC sample number convergence 
+    # Log-Log plot 2: MC sample number convergence
     fig, ax = plt.subplots(figsize=(14, 6))
 
     ax.loglog(N_mc_list, errors_explicit_exp2, 'bo-',
@@ -339,7 +281,6 @@ if __name__ == "__main__":
     ax.grid(True, which='both', alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('fig4_mc_sample_convergence.png', dpi=150, bbox_inches='tight')
+    plt.savefig(os.path.join(EXP_DIR,'exercise_1_2_mc_sample_convergence.png'), dpi=150, bbox_inches='tight')
     plt.close()
-    print("Exercise1.2: fig4_mc_sample_convergence.png has saved!")
-   
+    print("Exercise1.2: exercise_1_2_mc_sample_convergence.png has saved!")

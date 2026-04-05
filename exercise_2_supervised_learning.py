@@ -5,11 +5,13 @@ from torch.utils.data import DataLoader, TensorDataset
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-
+import os
 
 from exercise_1_1_lqr_solver import LQR
 
-
+EXP_NUM = 2
+EXP_DIR = f"experiment{EXP_NUM}"
+os.makedirs(EXP_DIR, exist_ok=True)
 
 # Utilities
 
@@ -265,14 +267,14 @@ def plot_loss(history: dict, title: str, out_file: str):
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(out_file, dpi=160)
+    plt.savefig(os.path.join(EXP_DIR,out_file), dpi=160)
     plt.close()
 
 
 @torch.no_grad()
 def save_predictions_table(model: nn.Module, loader: DataLoader, device: str, out_file: str):
     model.eval()
-    with open(out_file, 'w', encoding='utf-8') as f:
+    with open(os.path.join(EXP_DIR,out_file), 'w', encoding='utf-8') as f:
         first = True
         for xb, yb in loader:
             xb = xb.to(device)
@@ -310,23 +312,21 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f'Using device: {device}')
 
-    # Same baseline matrices as your friends' uploaded files.
     H = np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float64)
     M = np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float64)
     sigma = np.array([[0.5, 0.0], [0.0, 0.5]], dtype=np.float64)
     C = np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float64)
     D = np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float64)
-    R_mat = np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float64)
+    R = np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float64)
     T = 1.0
 
     # Step 1: Solve Exercise 1.1 exactly.
-    lqr = LQR(H, M, sigma, C, D, R_mat, T)
+    lqr = LQR(H, M, sigma, C, D, R, T)
     riccati_grid = np.linspace(0.0, T, 1001)
     lqr.solve_riccati(riccati_grid)
     exact = ExactLQRLabels(lqr, integral_grid_size=4001)
 
     # Step 2: Build one dataset shared by both Q2.1 and Q2.2.
-    # This keeps everything consistent for later parts.
     n_train = 40000
     n_val = 8000
     n_test = 8000
@@ -367,7 +367,7 @@ def main():
 
     plot_loss(value_hist, 'Exercise 2.1 Training Loss: Value Function', 'exercise_2_1_value_loss.png')
     save_predictions_table(value_net, value_test_loader, device, 'exercise_2_1_value_test_predictions.csv')
-    torch.save(value_net.state_dict(), 'exercise_2_1_value_net.pt')
+    torch.save(value_net.state_dict(), os.path.join(EXP_DIR,'exercise_2_1_value_net.pt'))
 
    
     # Exercise 2.2: supervised learning of control a
@@ -392,10 +392,10 @@ def main():
 
     plot_loss(control_hist, 'Exercise 2.2 Training Loss: Markov Control', 'exercise_2_2_control_loss.png')
     save_predictions_table(control_net, control_test_loader, device, 'exercise_2_2_control_test_predictions.csv')
-    torch.save(control_net.state_dict(), 'exercise_2_2_control_net.pt')
+    torch.save(control_net.state_dict(), os.path.join(EXP_DIR,'exercise_2_2_control_net.pt'))
 
-    # Save one compact summary file for write-up / later parts.
-    with open('exercise_2_summary.txt', 'w', encoding='utf-8') as f:
+    # Save one compact summary file
+    with open(os.path.join(EXP_DIR,'exercise_2_summary.txt'), 'w', encoding='utf-8') as f:
         f.write('Exercise 2 summary\n')
         f.write('===================\n')
         f.write(f'Device: {device}\n')
