@@ -4,9 +4,9 @@
 
 | Name | Student Number | Contribution |
 |------|---------------|-------------|
-| [Finlay Charleson] | [s1908808] | 1/3 |
-| [Huaying Wang] | [s2105829] | 1/3 |
-| [Jinxiu Lu] | [s2884616] | 1/3 |
+| Finlay Charleson | s1908808 | 1/3 |
+| Huaying Wang | s2105829 | 1/3 |
+| Jinxiu Lu | s2884616 | 1/3 |
 
 ## Dependencies
 
