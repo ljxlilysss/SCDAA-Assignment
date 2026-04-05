@@ -21,12 +21,43 @@ No other libraries are used, as required by the coursework specification.
 ## File Structure
 
 ```
-├── exercise_1_1_lqr_solver.py        # Exercise 1.1: LQR class, Riccati ODE solver
-├── exercise_1_2_lqr_mc.py            # Exercise 1.2: Monte Carlo verification
-├── exercise_2_supervised_learning.py  # Exercise 2.1 & 2.2: Supervised learning of v and a
-├── exercise_3_1_dgm.py               # Exercise 3.1: Deep Galerkin Method for linear PDE
-├── exercise_4_1_pia_dgm.py           # Exercise 4.1: Policy Iteration with DGM
-└── README.md
+SCDAA-ASSIGNMENT/
+├── exercise_1_1_lqr_solver.py              # Exercise 1.1: LQR class, Riccati ODE solver
+├── exercise_1_2_lqr_mc.py                  # Exercise 1.2: Monte Carlo verification
+├── exercise_2_supervised_learning.py        # Exercise 2.1 & 2.2: Supervised learning
+├── exercise_3_1_dgm.py                     # Exercise 3.1: Deep Galerkin Method
+├── exercise_4_1_pia_dgm.py                 # Exercise 4.1: Policy Iteration with DGM
+├── README.md
+├── .gitignore
+│
+├── experiment1/                             # Output from Exercise 1
+│   ├── fig1_riccati_solution.png
+│   ├── fig2_value_function_heatmap.png
+│   ├── fig3_time_discretisation_convergence.png
+│   └── fig4_mc_sample_convergence.png
+│
+├── experiment2/                             # Output from Exercise 2
+│   ├── exercise_2_1_value_loss.png
+│   ├── exercise_2_1_value_net.pt
+│   ├── exercise_2_1_value_test_predictions.csv
+│   ├── exercise_2_2_control_loss.png
+│   ├── exercise_2_2_control_net.pt
+│   ├── exercise_2_2_control_test_predictions.csv
+│   └── exercise_2_summary.txt
+│
+├── experiment3/                             # Output from Exercise 3
+│   ├── Exercise_3_1_dgm_mc_error.png
+│   ├── Exercise_3_1_dgm_training_loss.png
+│   ├── exercise_3_1_dgm_weights.pt
+│   └── exercise_3_1_validation.txt
+│
+└── experiment4/                             # Output from Exercise 4
+    ├── exercise_4_1_pia_convergence.png
+    ├── exercise_4_1_pia_eval_loss.png
+    ├── exercise_4_1_pia_improve_loss.png
+    ├── exercise_4_1_validation.txt
+    ├── exercise_4_1_value_net.pt
+    └── exercise_4_1_action_net.pt
 ```
 
 ### Code Dependencies Between Files
