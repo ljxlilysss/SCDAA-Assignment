@@ -60,19 +60,6 @@ SCDAA-ASSIGNMENT/
     └── exercise_4_1_action_net.pt
 ```
 
-### Code Dependencies Between Files
-
-```
-exercise_1_1_lqr_solver.py          ← base module, no dependencies
-exercise_1_2_lqr_mc.py              ← imports LQR from exercise_1_1
-exercise_2_supervised_learning.py    ← imports LQR from exercise_1_1
-exercise_3_1_dgm.py                 ← imports LQR from exercise_1_1
-                                       imports NetDGM from exercise_2
-exercise_4_1_pia_dgm.py             ← imports LQR from exercise_1_1
-                                       imports NetDGM, FFN from exercise_2
-                                       imports sample_interior, sample_terminal from exercise_3
-```
-
 ## Quick to Reproduce All Results
 
 ### 1. Install Dependencies
@@ -92,7 +79,7 @@ python exercise_3_1_dgm.py
 python exercise_4_1_pia_dgm.py
 ```
 
-Generated outputs will be saved automatically in its corrosponding `experimenti` directory.
+Generated outputs will be saved automatically in its corrosponding `experiment'i'` directory.
 
 ### Exercise 1.1 — Riccati ODE Solver
 
